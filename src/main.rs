@@ -9,7 +9,7 @@ const SIZE_Y: i32 = 20;
 const SCALE: f32 = 10.;
 const TEMP_DECAY: f32 = 0.01;
 const TEMP_DIFFUSION: f32 = 0.1;
-const BUG_HEAT: f32 = 15.;
+const BUG_HEAT: f32 = 2.;
 const BUG_MIN: f32 = 10.;
 const BUG_MAX: f32 = 40.;
 const BUG_NUMBER: i32 = 30;
@@ -54,7 +54,7 @@ fn setup (
                 commands.spawn((
                     Cell,
                     IntCoords{x: i, y: j}, 
-                    Temperature(rng.random_range(0.0..50.0)),
+                    Temperature(rng.random_range(0.0..5.0)),
                     Mesh2d(c),
                     MeshMaterial2d(materials.add(Color::linear_rgb(0.,0.,0.))),
                     Transform::from_xyz(
@@ -67,9 +67,19 @@ fn setup (
         }
     }
     for _ in 0..BUG_NUMBER {
+	let c = meshes.add(Rectangle::new(SCALE, SCALE));
+	let xr = rng.random_range(0..SIZE_X);
+	let yr = rng.random_range(0..SIZE_Y);
 	commands.spawn((
 	    Bug,
-	    IntCoords{x: rng.random_range(0..SIZE_X), y: rng.random_range(0..SIZE_Y)},
+	    IntCoords{x: xr, y: yr},
+	    Mesh2d(c),
+	    MeshMaterial2d(materials.add(Color::linear_rgb(0.,0.7,1.))),
+	    Transform::from_xyz(
+		SCALE * xr as f32 - SIZE_X as f32 * SCALE / 2.,
+                SCALE * yr as f32 - SIZE_Y as f32 * SCALE / 2.,
+                0.,
+	    ),
 	));
     }
 }
@@ -103,11 +113,14 @@ fn temp_update (
 			}
 		    } else {
 			panic!("neighbour not found");
-		    }
-		    
+		    }		    
 		}
 	    }
 	}
+    }
+    for c in bugs.into_iter(){
+	let mut t = cells.get_mut(*field.0.get(&IntCoords{x: c.x, y: c.y}).unwrap()).unwrap();
+	t.0 += BUG_HEAT;
     }
 }
 
@@ -117,6 +130,10 @@ fn redraw (
 ) {
     for mut cell in &query {
         let material = materials.get_mut(cell.0.0.id()).unwrap();
-        material.color = Color::linear_rgb(1. - 1. / ((cell.1.0 + 1.) / 10.), 0., 0.);
+        material.color = Color::linear_rgb(
+	    1. - 1. / ((cell.1.0 + 1.) / 10.),
+	    1. - 1. / ((cell.1.0 + 1.) / 10.),
+	    1. - 1. / ((cell.1.0 + 1.) / 10.),
+	);
     }
 }
