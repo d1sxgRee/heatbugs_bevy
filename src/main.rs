@@ -157,7 +157,12 @@ fn move_bugs (
     mut bugs: Query<&mut IntCoords, With<Bug>>,
     cells: Query<&Temperature, With<Cell>>,
 ) {
+    let mut locked_positions: HashSet<IntCoords> = HashSet::new();
+    for bug in &bugs {
+	locked_positions.insert(bug.clone());
+    }
     for mut bug in &mut bugs {
+	locked_positions.remove(&bug);
 	let mut t = cells.get(*field.0.get(&bug).unwrap()).unwrap();
 	if t.0 > BUG_MAX || t.0 < BUG_MIN {
 	    let mut best_move: IntCoords = bug.clone();
@@ -167,28 +172,30 @@ fn move_bugs (
 			x: (x + bug.x + SIZE_X) % SIZE_X,
 			y: (y + bug.y + SIZE_Y) % SIZE_Y,
 		    };
-		    let tn = cells.get(*field.0.get(&c).unwrap()).unwrap();
-		    if tn.0 >= BUG_MIN && tn.0 <= BUG_MAX {
-			if t.0 >= BUG_MIN && t.0 <= BUG_MAX {
-			    if
-				(tn.0 - BUG_MIN).abs().min((tn.0 - BUG_MAX).abs()) >
-				(t.0 - BUG_MIN).abs().min((t.0 - BUG_MAX).abs())
-			    {
+		    if !locked_positions.contains(&c) {
+			let tn = cells.get(*field.0.get(&c).unwrap()).unwrap();
+			if tn.0 >= BUG_MIN && tn.0 <= BUG_MAX {
+			    if t.0 >= BUG_MIN && t.0 <= BUG_MAX {
+				if
+				    (tn.0 - BUG_MIN).abs().min((tn.0 - BUG_MAX).abs()) >
+				    (t.0 - BUG_MIN).abs().min((t.0 - BUG_MAX).abs())
+				{
+				    best_move = c.clone();
+				    t = tn;
+				}
+			    } else {
 				best_move = c.clone();
 				t = tn;
 			    }
-			} else {
-			    best_move = c.clone();
-			    t = tn;
-			}
-		    } else if tn.0 < BUG_MIN || tn.0 > BUG_MAX {
-			if t.0 < BUG_MIN || t.0 > BUG_MAX {
-			    if
-				(tn.0 - BUG_MIN).abs().min((tn.0 - BUG_MAX).abs()) <
-				(t.0 - BUG_MIN).abs().min((t.0 - BUG_MAX).abs())
-			    {
-				best_move = c.clone();
-				t = tn;
+			} else if tn.0 < BUG_MIN || tn.0 > BUG_MAX {
+			    if t.0 < BUG_MIN || t.0 > BUG_MAX {
+				if
+				    (tn.0 - BUG_MIN).abs().min((tn.0 - BUG_MAX).abs()) <
+				    (t.0 - BUG_MIN).abs().min((t.0 - BUG_MAX).abs())
+				{
+				    best_move = c.clone();
+				    t = tn;
+				}
 			    }
 			}
 		    }
@@ -196,6 +203,7 @@ fn move_bugs (
 	    }
 	    bug.x = best_move.x;
 	    bug.y = best_move.y;
+	    locked_positions.insert(best_move);
 	}
     }
 }
